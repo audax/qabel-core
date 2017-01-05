@@ -636,6 +636,16 @@ abstract class AbstractNavigation(
     }
 
     @Throws(QblStorageException::class)
+    override fun rename(boxFile: BoxFile, name: String): BoxFile {
+        TODO()
+    }
+
+    @Throws(QblStorageException::class)
+    override fun rename(boxFolder: BoxFolder, name: String): BoxFolder {
+        TODO()
+    }
+
+    @Throws(QblStorageException::class)
     override fun getSharesOf(boxObject: BoxObject): List<BoxShare> {
         return indexNavigation.listShares().filter({ share -> share.ref == boxObject.ref }).toList()
     }

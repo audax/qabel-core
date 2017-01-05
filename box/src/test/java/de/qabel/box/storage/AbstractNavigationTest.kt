@@ -8,6 +8,8 @@ import de.qabel.box.storage.command.ShareChange
 import de.qabel.box.storage.command.UnshareChange
 import de.qabel.box.storage.command.UpdateFileChange
 import de.qabel.box.storage.dto.DMChangeEvent
+import de.qabel.box.storage.exceptions.QblStorageException
+import de.qabel.box.storage.exceptions.QblStorageNameConflict
 import de.qabel.box.storage.hash.QabelBoxDigestProvider
 import de.qabel.box.storage.jdbc.JdbcDirectoryMetadataFactory
 import de.qabel.core.config.Prefix
@@ -22,6 +24,9 @@ import rx.observers.TestSubscriber
 import java.io.*
 import java.security.Security
 import java.util.*
+import org.amshove.kluent.*
+import org.junit.Ignore
+
 
 abstract class AbstractNavigationTest {
     init {
@@ -47,6 +52,9 @@ abstract class AbstractNavigationTest {
     )
     abstract val nav: AbstractNavigation
     var subscriber = TestSubscriber<DMChangeEvent>()
+
+    val filename = "testfile"
+    val folderName = "testfolder"
 
     @Before
     open fun setUp() {
@@ -123,7 +131,7 @@ abstract class AbstractNavigationTest {
     @Test
     fun catchesDMConflictsWhileUploadingDm() {
         nav.setAutocommit(false)
-        nav.upload("testfile", "content".byteInputStream(), 7L)
+        upload(filename)
         val cPath = setupConflictingDM() { it.insertFile(someFile("anotherFile")) }
 
         var dmWasUploaded = false
@@ -144,9 +152,47 @@ abstract class AbstractNavigationTest {
 
         nav.commit()
 
-        assertTrue(nav.hasFile("testfile"))
+        assertTrue(nav.hasFile(filename))
         assertTrue(nav.hasFile("anotherFile"))
         assertTrue(dmWasUploaded)
+    }
+
+    @Test fun `can rename a file without a conflict`() {
+        val newName = "newName"
+        upload(filename).let {
+            nav.rename(it, newName)
+            assertTrue(nav.hasFile(newName))
+            assertFalse(nav.hasFile(filename))
+        }
+    }
+
+    @Test fun `can rename a folder without a conflict`() {
+        val newName = "newName"
+        nav.createFolder(folderName).let {
+            nav.rename(it, newName)
+            assertTrue(nav.hasFolder(newName))
+            assertFalse(nav.hasFolder(folderName))
+        }
+    }
+
+    @Test fun `can't rename a folder to an existing name`() {
+        val newName = "newName"
+        nav.createFolder(newName)
+        upload(filename)
+        nav.createFolder(folderName).let {
+            { nav.rename(it, newName) } shouldThrow QblStorageNameConflict::class
+            { nav.rename(it, filename) } shouldThrow QblStorageNameConflict::class
+        }
+    }
+
+    @Test fun `can't rename a file to an existing folder name`() {
+        val newName = "testfile2"
+        nav.createFolder(folderName)
+        upload(newName)
+        upload(filename).let {
+            { nav.rename(it, folderName) } shouldThrow QblStorageNameConflict::class
+            { nav.rename(it, newName) } shouldThrow QblStorageNameConflict::class
+        }
     }
 
     private fun setupConflictingDM(action: ((DirectoryMetadata) -> Unit)? = null): File {

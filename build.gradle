@@ -46,6 +46,7 @@ subprojects {
         testCompile 'org.meanbean:meanbean:2.+'
         testCompile 'org.mockito:mockito-core:2.0.52-beta'
         testCompile 'com.nhaarman:mockito-kotlin:0.6.0'
+        testCompile 'org.amshove.kluent:kluent:1.13'
         compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     }
 

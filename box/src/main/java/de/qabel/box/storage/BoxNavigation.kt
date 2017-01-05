@@ -175,6 +175,12 @@ interface BoxNavigation : ReadableBoxNavigation {
     @Throws(QblStorageException::class)
     fun delete(folder: BoxFolder)
 
+    @Throws(QblStorageException::class)
+    fun rename(boxFile: BoxFile, name: String): BoxFile
+
+    @Throws(QblStorageException::class)
+    fun rename(boxFolder: BoxFolder, name: String): BoxFolder
+
     /**
      * Remove a share mount from the current folder
      */
