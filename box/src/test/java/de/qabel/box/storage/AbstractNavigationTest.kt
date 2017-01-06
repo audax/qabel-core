@@ -3,12 +3,8 @@ package de.qabel.box.storage
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.hasSize
-import de.qabel.box.storage.command.DeleteFileChange
-import de.qabel.box.storage.command.ShareChange
-import de.qabel.box.storage.command.UnshareChange
-import de.qabel.box.storage.command.UpdateFileChange
+import de.qabel.box.storage.command.*
 import de.qabel.box.storage.dto.DMChangeEvent
-import de.qabel.box.storage.exceptions.QblStorageException
 import de.qabel.box.storage.exceptions.QblStorageNameConflict
 import de.qabel.box.storage.hash.QabelBoxDigestProvider
 import de.qabel.box.storage.jdbc.JdbcDirectoryMetadataFactory
@@ -16,6 +12,7 @@ import de.qabel.core.config.Prefix
 import de.qabel.core.crypto.CryptoUtils
 import de.qabel.core.crypto.QblECKeyPair
 import de.qabel.core.extensions.letApply
+import org.amshove.kluent.shouldThrow
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -24,8 +21,6 @@ import rx.observers.TestSubscriber
 import java.io.*
 import java.security.Security
 import java.util.*
-import org.amshove.kluent.*
-import org.junit.Ignore
 
 
 abstract class AbstractNavigationTest {
@@ -116,15 +111,17 @@ abstract class AbstractNavigationTest {
         nav.changes.subscribe(subscriber)
     }
 
-    fun <T> assertChange(clazz: Class<T>, block: T.() -> Unit) : T {
+    inline fun <reified T: DMChange<*>> assertChange(clazz: Class<T>, block: T.() -> Unit) : DMChange<*> {
         val changes = subscriber.onNextEvents
         assertThat("no event happend, but expecting one", changes, hasSize(equalTo(1)))
 
         val change = changes.first().change
-        if (!clazz.isInstance(change)) {
+        val castedChange = change as? T
+        if (castedChange == null) {
             fail(change.toString() + " is not of type " + clazz.name)
+        } else {
+            block(castedChange)
         }
-        block(change as T)
         return change
     }
 
